@@ -3,7 +3,6 @@
 #define REQUIRED_SITTING_TIME 5
 #define DELTA_ANGLE_THRESHOLD 5
 
-#define CENTER_OF_PRESSURE_EMISSION_PERIOD 15
 #define KEEP_ALIVE_PERIOD 300000
 #define MINIMUM_BACK_REST_ANGLE 2
 
@@ -48,12 +47,9 @@ void ChairManager::UpdateDevices()
     //printf("Current Speed = %f\n\n", _currentSpeed);
 #endif
 
-    // Envoi de la moyenne de la position dans les 5 dernieres minutes.
-    // TODO Ceci est temporaire, il va falloir envoyer le centre de pression quand il y a un changement majeur.
-    // Ceci sera revue en même temps que tous le scheduling
-    if (_timer.Elapsed() >= CENTER_OF_PRESSURE_EMISSION_PERIOD * 1000 && _isSomeoneThere)
+    if (_centerOfPressureTimer.Elapsed() >= CENTER_OF_PRESSURE_EMISSION_PERIOD.count() && _isSomeoneThere)
     {
-        _timer.Reset();
+        _centerOfPressureTimer.Reset();
         _mosquittoBroker->SendCenterOfPressure(_copCoord.x, _copCoord.y, _currentDatetime);
     }
 

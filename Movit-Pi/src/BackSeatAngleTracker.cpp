@@ -6,7 +6,12 @@
 #include <string>
 #include <unistd.h>
 
-enum _axis { x, y, z };
+enum _axis
+{
+    x,
+    y,
+    z
+};
 const std::string fixedImuName = "fixedImu";
 const std::string mobileImuName = "mobileImu";
 
@@ -163,7 +168,7 @@ void BackSeatAngleTracker::GetAccelerometerMeans(MPU6050 &mpu, int accelerationB
 void BackSeatAngleTracker::CalibrateAccelerometer(MPU6050 &mpu)
 {
     uint8_t ready = 0;
-    int accelerometerMeans[NUMBER_OF_AXIS] =  {0,0,0};
+    int accelerometerMeans[NUMBER_OF_AXIS] = {0, 0, 0};
     GetAccelerometerMeans(mpu, accelerometerMeans);
 
     _accelerometerOffsets[_axis::x] = (_calibrationArray[_axis::x] - accelerometerMeans[_axis::x]) / 8;
@@ -178,7 +183,9 @@ void BackSeatAngleTracker::CalibrateAccelerometer(MPU6050 &mpu)
 
         for (uint8_t i = 0; i < NUMBER_OF_AXIS; i++)
         {
+#ifdef DEBUG_PRINT
             printf("%i\n", abs(_calibrationArray[i] - accelerometerMeans[i]));
+#endif
 
             if (abs(_calibrationArray[i] - accelerometerMeans[i]) <= ACCELEROMETER_DEADZONE)
             {
@@ -195,7 +202,7 @@ void BackSeatAngleTracker::CalibrateAccelerometer(MPU6050 &mpu)
 void BackSeatAngleTracker::CalibrateGyroscope(MPU6050 &mpu)
 {
     uint8_t ready = 0;
-    int gyroscopeMeans[NUMBER_OF_AXIS] = {0,0,0};
+    int gyroscopeMeans[NUMBER_OF_AXIS] = {0, 0, 0};
     GetGyroscopeMeans(mpu, gyroscopeMeans);
 
     _gyroscopeOffsets[_axis::x] = -gyroscopeMeans[_axis::x] / 4;
@@ -261,8 +268,7 @@ void BackSeatAngleTracker::GetAcceleration(MPU6050 &mpu, double *acceleration)
 
 double BackSeatAngleTracker::GetPitch(double acceleration[])
 {
-    return atan2(acceleration[_axis::x], sqrt(acceleration[_axis::y] * acceleration[_axis::y]
-    + acceleration[_axis::z] * acceleration[_axis::z])) * radiansToDegrees;
+    return atan2(acceleration[_axis::x], sqrt(acceleration[_axis::y] * acceleration[_axis::y] + acceleration[_axis::z] * acceleration[_axis::z])) * radiansToDegrees;
 }
 
 int BackSeatAngleTracker::GetBackSeatAngle()
