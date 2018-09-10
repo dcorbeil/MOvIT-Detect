@@ -35,6 +35,8 @@ class MosquittoBroker : public mosqpp::mosquittopp
     bool CalibPressureMatRequired();
     bool CalibIMURequired();
 
+    bool IsVibrationDeactivated() { return _isVibrationDeactivated; }
+
   private:
     bool _setAlarmOn = false;
     uint32_t _requiredBackRestAngle = 0;
@@ -43,6 +45,7 @@ class MosquittoBroker : public mosqpp::mosquittopp
 
     bool _calibPressureMatRequired = false;
     bool _calibIMURequired = false;
+    bool _isVibrationDeactivated = false;
 
     bool _setAlarmOnNew = false;
     bool _requiredBackRestAngleNew = false;
