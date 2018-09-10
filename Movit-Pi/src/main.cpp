@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 
     auto start = std::chrono::system_clock::now();
     auto end = std::chrono::system_clock::now();
-    auto period = milliseconds(100);
+    auto period = milliseconds(1000);
 
     bool done = false;
 
@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
             end = std::chrono::system_clock::now();
             auto elapse_time = std::chrono::duration_cast<milliseconds>(end - start);
 
-            printf("%lli\n", period.count() - elapse_time.count());
             sleep_for_milliseconds(period.count() - elapse_time.count());
         }
     }
