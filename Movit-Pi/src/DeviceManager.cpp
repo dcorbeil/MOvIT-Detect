@@ -1,6 +1,7 @@
 #include "DeviceManager.h"
 #include "NetworkManager.h"
 #include "I2Cdev.h"
+#include "Utils.h"
 
 #include <unistd.h>
 #include <thread>
@@ -73,7 +74,7 @@ void DeviceManager::Update()
     if (_imuValid)
     {
         // Data: Angle (centrales intertielles mobile/fixe)
-        _backSeatAngle = _imu.GetBackSeatAngle();
+        _backSeatAngle = _backSeatAngleTracker.GetBackSeatAngle();
     }
 
     if (_forcePlateValid)
@@ -87,6 +88,11 @@ void DeviceManager::Update()
             _globalForcePlate.DetectCenterOfPressure(_globalForcePlate, _sensorMatrix);
             _COPCoord.x = _globalForcePlate.GetCOPx();
             _COPCoord.y = _globalForcePlate.GetCOPy();
+        }
+        else
+        {
+            _COPCoord.x = 0;
+            _COPCoord.y = 0;
         }
     }
 }
@@ -148,7 +154,7 @@ bool DeviceManager::TestDevices()
         while (count++ < 70)
         {
             _alarm.TurnOnDCMotor();
-            usleep(0.1 * 1000 * 1000);
+            sleep_for_microseconds(0.1 * 1000 * 1000);
         }
         _alarm.TurnOffDCMotor();
     }
@@ -280,7 +286,7 @@ bool DeviceManager::TestDevices()
     {
         printf("Eteindre les DELs et arrêter le moteur DC.\n");
         // _alarm.TurnOffAlarm();
-        _imu.GetBackSeatAngle();
+        _backSeatAngleTracker.GetBackSeatAngle();
     }
     else if (inSerialChar == 'i')
     {
