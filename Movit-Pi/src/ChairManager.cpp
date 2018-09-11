@@ -86,6 +86,14 @@ void ChairManager::UpdateDevices()
         _mosquittoBroker->SendKeepAlive(_currentDatetime);
     }
 
+    if (_vibrationTimer.Elapsed() >= VIBRATION_EMISSION_PERIOD)
+    {
+        double acceleration = _devicemgr->GetXAcceleration();
+        printf("getXAcceleration (vibration) = %f\n", acceleration);
+        _vibrationTimer.Reset();
+        _mosquittoBroker->SendVibration(acceleration, _currentDatetime);
+    }
+
     if (_prevIsSomeoneThere != _isSomeoneThere)
     {
         _mosquittoBroker->SendIsSomeoneThere(_isSomeoneThere, _currentDatetime);
