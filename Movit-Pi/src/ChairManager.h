@@ -13,6 +13,7 @@ class ChairManager
 {
   public:
     ChairManager(MosquittoBroker *mosquittoBroker, DeviceManager *devicemgr);
+    ~ChairManager();
 
     inline bool TestPattern() { return _devicemgr->TestDevices(); }
 
@@ -39,6 +40,7 @@ class ChairManager
     bool _isSomeoneThere = false;
     bool _prevIsSomeoneThere = false;
     bool _isMoving = false;
+
     bool _overrideNotificationPattern = false;
     bool _setAlarmOn = false;
 
@@ -49,6 +51,7 @@ class ChairManager
     Timer _centerOfPressureTimer;
     Timer _chairAngleTimer;
     Timer _keepAliveTimer;
+    Timer _vibrationTimer;
 
     void CheckIfUserHasBeenSittingForRequiredTime();
     void CheckIfBackRestIsRequired();
