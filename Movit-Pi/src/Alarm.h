@@ -14,6 +14,9 @@ class Alarm
 
     bool _isRedAlarmOn = false;
     bool _isBlinkLedsAlarmOn = false;
+    bool _isBlinkGreenAlarmOn = false;
+
+    bool _isBlinkGreenAlarmRequired = false;
 
     bool _deactivateVibration = false;
 
@@ -43,9 +46,13 @@ class Alarm
     void TurnOnBlinkLedsAlarm();
     void TurnOnRedAlarm();
     void TurnOnGreenAlarm();
+    void TurnOnBlinkGreenAlarm();
+
+    void StopBlinkGreenAlarm();
 
     std::thread TurnOnRedAlarmThread();
     std::thread TurnOnBlinkLedsAlarmThread();
+    std::thread TurnOnBlinkGreenAlarmThread();
 };
 
 #endif // ALARM_H
