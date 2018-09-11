@@ -5,8 +5,8 @@
 #include <fstream>
 #include <stdio.h>
 #include <thread>
-#include <deque>
 
+#include "MovingAverage.h"
 #include "PMW3901.h"
 #include "VL53L0X.h"
 #include "Utils.h"
@@ -36,20 +36,21 @@ class MotionSensor
     bool InitializeRangeSensor();
     bool ValidDistanceToTheGround();
 
-    float PixelsToMillimeter(float pixels);
-    float GetAverageRange();
+    uint16_t PixelsToMillimeter(double pixels);
+    double GetAverageRange();
 
-    void UpdateTravel(int16_t *deltaX, int16_t *deltaY);
-    void updateRangeDeque(uint16_t value);
     void readRangeSensor();
     void readFlowSensor();
+    void UpdateTravel();
     void GetDeltaXY();
 
     std::chrono::high_resolution_clock::time_point _timeoutStartMs;
     PMW3901 _opticalFLowSensor; // Optical Flow Sensor
     VL53L0X _rangeSensor;       // Range Sensor
-    float _isMovingTravel;
-    std::deque<uint16_t> _rangeDeque;
+    uint16_t _isMovingTravel;
+    MovingAverage<uint16_t> *_rangeAverage;
+    MovingAverage<int16_t> *_deltaXAverage;
+    MovingAverage<int16_t> *_deltaYAverage;
     Timer _timer;
 };
 

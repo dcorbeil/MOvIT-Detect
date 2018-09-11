@@ -5,20 +5,23 @@
 #define TIME_BETWEEN_READINGS 100 // In milliseconde
 #define MINIMUM_WORKING_RANGE 80  //The sensor needs a minimum of 80 mm to the ground.
 
-#define WHEELCHAIR_MOVING_THRESHOLD 0.25f // In meter
-#define WHEELCHAIR_MOVING_TIMEOUT 5000    // In milliseconde
-#define MAX_DEQUE_VALUES 10
+#define WHEELCHAIR_MOVING_THRESHOLD 150 // In millimeter
+#define WHEELCHAIR_MOVING_TIMEOUT 3000    // In milliseconde
+#define MAX_RANGE_VALUES 8
 
 const char *FAIL_MESSAGE = "FAIL \n";
 const char *SUCCESS_MESSAGE = "SUCCESS \n";
 
 MotionSensor::MotionSensor()
 {
-
 }
 
 void MotionSensor::Initialize()
 {
+    _rangeAverage = new MovingAverage<uint16_t>(MAX_RANGE_VALUES);
+    _deltaXAverage = new MovingAverage<int16_t>(MAX_RANGE_VALUES);
+    _deltaYAverage = new MovingAverage<int16_t>(MAX_RANGE_VALUES);
+
     bool rangeSensorInit = InitializeRangeSensor();
     bool flowSensorInit = InitializeOpticalFlowSensor();
     if (rangeSensorInit && flowSensorInit)
@@ -76,14 +79,36 @@ void MotionSensor::GetDeltaXY()
     }
 }
 
-void MotionSensor::UpdateTravel(int16_t *deltaX, int16_t *deltaY)
+void MotionSensor::readRangeSensor()
 {
-    float travelInPixels = sqrtf(float((*deltaX * *deltaX) + (*deltaY * *deltaY)));
-    float travelInMillimeter = PixelsToMillimeter(travelInPixels);
+    uint16_t range = _rangeSensor.ReadRangeSingleMillimeters();
+    _rangeAverage->AddSample(range);
+}
+
+void MotionSensor::readFlowSensor()
+{
+    int16_t deltaX = 0;
+    int16_t deltaY = 0;
+    _opticalFLowSensor.ReadMotionCount(&deltaX, &deltaY);
+
+    _deltaXAverage->AddSample(deltaX);
+    _deltaYAverage->AddSample(deltaY);
+
+    UpdateTravel();
+}
+
+void MotionSensor::UpdateTravel()
+{
+    int16_t deltaX = _deltaXAverage->GetAverage();
+    int16_t deltaY = _deltaYAverage->GetAverage();
+    double travelInPixels = sqrtf(double((deltaX * deltaX) + (deltaY * deltaY)));
+    uint16_t travelInMillimeter = PixelsToMillimeter(travelInPixels);
     _isMovingTravel += travelInMillimeter;
+
 #ifdef DEBUG_PRINT
-    printf("Delta X %i: \n", *deltaX);
-    printf("Delta Y %i: \n", *deltaY);
+    printf("Delta X %i: \n", deltaX);
+    printf("Delta Y %i: \n", deltaY);
+    printf("Travel %i: \n", travelInMillimeter);
 
     std::ofstream file;
 
@@ -93,48 +118,18 @@ void MotionSensor::UpdateTravel(int16_t *deltaX, int16_t *deltaY)
     {
         return;
     }
-    file << *deltaX << ";" << *deltaY << ";" << GetAverageRange() << ";" << travelInMillimeter << std::endl;
+    file << deltaX << ";" << deltaY << ";" << GetAverageRange() << ";" << travelInMillimeter << std::endl;
     file.close();
 #endif
 }
 
-void MotionSensor::readFlowSensor()
-{
-    int16_t deltaX = 0;
-    int16_t deltaY = 0;
-
-    _opticalFLowSensor.ReadMotionCount(&deltaX, &deltaY);
-    UpdateTravel(&deltaX, &deltaY);
-}
-
-void MotionSensor::readRangeSensor()
-{
-    uint16_t range = _rangeSensor.ReadRangeSingleMillimeters();
-    updateRangeDeque(range);
-}
-
-float MotionSensor::GetAverageRange()
+double MotionSensor::GetAverageRange()
 {
     if (_rangeSensor.TimeoutOccurred())
     {
         printf("ERROR: Timeout occurred in range sensor \n");
     }
-
-    uint16_t rangeDequeSum = 0;
-    for (std::deque<uint16_t>::iterator it = _rangeDeque.begin(); it != _rangeDeque.end(); ++it)
-    {
-        rangeDequeSum += *it;
-    }
-    return float(rangeDequeSum / _rangeDeque.size());
-}
-
-void MotionSensor::updateRangeDeque(uint16_t value)
-{
-    if (_rangeDeque.size() >= MAX_DEQUE_VALUES)
-    {
-        _rangeDeque.pop_back();
-    }
-    _rangeDeque.push_front(value);
+    return _rangeAverage->GetAverage();
 }
 
 bool MotionSensor::ValidDistanceToTheGround()
@@ -163,13 +158,13 @@ bool MotionSensor::GetIsMoving()
     return true;
 }
 
-float MotionSensor::PixelsToMillimeter(float pixels)
+uint16_t MotionSensor::PixelsToMillimeter(double pixels)
 {
     // The camera has a field of view of 42 degrees or 0.733038285 rad.
     // The sensor is 30 pixels by 30 pixels
     // We assume that the sensor is perpendicular to the ground.
     // Arc Length = fov_in_rad * height_from_the_ground
-    float const nbOfPixels = 30.0f;
-    float const fov = 0.733038285f;
-    return (pixels * fov * GetAverageRange()) / nbOfPixels;
+    double const nbOfPixels = 30.0f;
+    double const fov = 0.733038285f;
+    return (uint32_t)((pixels * fov * GetAverageRange()) / nbOfPixels);
 }
