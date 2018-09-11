@@ -3,10 +3,11 @@
 #include "Utils.h"
 
 #define TIME_BETWEEN_READINGS 100   // In milliseconde
-#define MINIMUM_WORKING_RANGE 0.08f //The sensor needs a minimum of 80 mm to the ground.
+#define MINIMUM_WORKING_RANGE 80 //The sensor needs a minimum of 80 mm to the ground.
 
 #define WHEELCHAIR_MOVING_THRESHOLD 0.25f // In meter
 #define WHEELCHAIR_MOVING_TIMEOUT 5000    // In milliseconde
+#define MAX_DEQUE_VALUES 10
 
 const char *FAIL_MESSAGE = "FAIL \n";
 const char *SUCCESS_MESSAGE = "SUCCESS \n";
@@ -62,13 +63,12 @@ std::thread MotionSensor::GetDeltaXYThread()
 
 void MotionSensor::GetDeltaXY()
 {
-    int16_t deltaX = 0;
-    int16_t deltaY = 0;
+
 
     while (1)
     {
-        _opticalFLowSensor.ReadMotionCount(&deltaX, &deltaY);
-        UpdateTravel(&deltaX, &deltaY);
+        readRangeSensor();
+        readFlowSensor();
         sleep_for_milliseconds(TIME_BETWEEN_READINGS);
     }
 }
@@ -76,15 +76,11 @@ void MotionSensor::GetDeltaXY()
 void MotionSensor::UpdateTravel(int16_t *deltaX, int16_t *deltaY)
 {
     float travelInPixels = sqrtf(float((*deltaX * *deltaX) + (*deltaY * *deltaY)));
-    float travelInMeters = PixelsToMeters(travelInPixels);
-    _lastTravel += travelInMeters;
-    _isMovingTravel += travelInMeters;
+    float travelInMillimeter = PixelsToMillimeter(travelInPixels);
 
 #ifdef DEBUG_PRINT
     printf("Delta X %i: \n", *deltaX);
     printf("Delta Y %i: \n", *deltaY);
-    printf("Travel %lf: \n", travelInMeters);
-    printf("Is Moving travel %lf: \n", _isMovingTravel);
 
     std::ofstream file;
 
@@ -94,24 +90,54 @@ void MotionSensor::UpdateTravel(int16_t *deltaX, int16_t *deltaY)
     {
         return;
     }
-    file << *deltaX << ";" << *deltaY << ";" << GetRangeInMeters() << ";" << travelInMeters << std::endl;
+    file << *deltaX << ";" << *deltaY << ";" << GetAverageRange() << ";" << travelInMillimeter << std::endl;
     file.close();
 #endif
 }
 
-float MotionSensor::GetRangeInMeters()
+void readFlowSensor()
+{
+    int16_t deltaX = 0;
+    int16_t deltaY = 0;
+
+    _opticalFLowSensor.ReadMotionCount(&deltaX, &deltaY);
+    UpdateTravel(&deltaX, &deltaY);
+}
+
+void readRangeSensor()
+{
+    uint16_t range = _rangeSensor.ReadRangeSingleMillimeters();
+    updateRangeDeque(range);
+}
+
+float MotionSensor::GetAverageRange()
 {
     if (_rangeSensor.TimeoutOccurred())
     {
-        printf("Timeout occurred in range sensor \n");
+        printf("ERROR: Timeout occurred in range sensor \n");
     }
-    return float(_rangeSensor.ReadRangeSingleMillimeters()) / 1000.0f;
+
+    uint16_t rangeDequeSum = 0;
+    for (std::deque<uint16_t>::iterator it = _rangeDeque.begin(); it != _rangeDeque.end(); ++it)
+    {
+        rangeDequeSum += *it; 
+    }
+    return float(rangeDequeSum / _rangeDeque.size());
+}
+
+void updateRangeDeque(uint16_t value)
+{
+    if (_rangeDeque.size() >= MAX_DEQUE_VALUES)
+    {
+        _rangeDeque.pop_back();
+    }
+    _rangeDeque.push_front(value);
 }
 
 bool MotionSensor::ValidDistanceToTheGround()
 {
     printf("Validation of the minimum height of the flow sensor ... ");
-    if (GetRangeInMeters() < MINIMUM_WORKING_RANGE)
+    if (GetAverageRange() < MINIMUM_WORKING_RANGE)
     {
         printf(FAIL_MESSAGE);
         return false;
@@ -134,15 +160,7 @@ bool MotionSensor::GetIsMoving()
     return true;
 }
 
-float MotionSensor::GetLastTravel()
-{
-    // Add a mutex to avoid updating the value and read it at the same time
-    float lastTravelBackup = _lastTravel;
-    _lastTravel = 0.0f;
-    return lastTravelBackup;
-}
-
-float MotionSensor::PixelsToMeters(float pixels)
+float MotionSensor::PixelsToMillimeter(float pixels)
 {
     // The camera has a field of view of 42 degrees or 0.733038285 rad.
     // The sensor is 30 pixels by 30 pixels
@@ -150,5 +168,5 @@ float MotionSensor::PixelsToMeters(float pixels)
     // Arc Length = fov_in_rad * height_from_the_ground
     float const nbOfPixels = 30.0f;
     float const fov = 0.733038285f;
-    return (pixels * fov * GetRangeInMeters()) / nbOfPixels;
+    return (pixels * fov * GetAverageRange()) / nbOfPixels;
 }

@@ -22,7 +22,6 @@ class MotionSensor
     }
 
     void Initialize();
-    float GetLastTravel();
     bool GetIsMoving();
 
   private:
@@ -36,19 +35,19 @@ class MotionSensor
     bool InitializeRangeSensor();
     bool ValidDistanceToTheGround();
 
-    float GetRangeInMeters();
-    void GetDeltaXY();
+    float PixelsToMeters(float pixels);
+    float GetAverageRange();
 
     void UpdateTravel(int16_t *deltaX, int16_t *deltaY);
-    float PixelsToMeters(float pixels);
-
-    float _lastTravel = 0.0f;
-    float _isMovingTravel = 0.0f;
+    void updateRangeDeque();
+    void readRangeSensor();
+    void readFlowSensor();
+    void GetDeltaXY();
 
     std::chrono::high_resolution_clock::time_point _timeoutStartMs;
     PMW3901 _opticalFLowSensor; // Optical Flow Sensor
     VL53L0X _rangeSensor;       // Range Sensor
-
+    std::deque<uint16_t> _rangeDeque;
     Timer _timer;
 };
 
