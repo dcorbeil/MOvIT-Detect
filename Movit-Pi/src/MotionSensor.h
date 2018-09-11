@@ -5,6 +5,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <thread>
+#include <deque>
 
 #include "PMW3901.h"
 #include "VL53L0X.h"
@@ -15,10 +16,10 @@ class MotionSensor
 {
   public:
     // Singleton
-    static MotionSensor &GetInstance()
+    static MotionSensor *GetInstance()
     {
       static MotionSensor instance;
-      return instance;
+      return &instance;
     }
 
     void Initialize();
@@ -35,11 +36,11 @@ class MotionSensor
     bool InitializeRangeSensor();
     bool ValidDistanceToTheGround();
 
-    float PixelsToMeters(float pixels);
+    float PixelsToMillimeter(float pixels);
     float GetAverageRange();
 
     void UpdateTravel(int16_t *deltaX, int16_t *deltaY);
-    void updateRangeDeque();
+    void updateRangeDeque(uint16_t value);
     void readRangeSensor();
     void readFlowSensor();
     void GetDeltaXY();
@@ -47,6 +48,7 @@ class MotionSensor
     std::chrono::high_resolution_clock::time_point _timeoutStartMs;
     PMW3901 _opticalFLowSensor; // Optical Flow Sensor
     VL53L0X _rangeSensor;       // Range Sensor
+    float _isMovingTravel;
     std::deque<uint16_t> _rangeDeque;
     Timer _timer;
 };

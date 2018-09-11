@@ -2,8 +2,8 @@
 #include <math.h>
 #include "Utils.h"
 
-#define TIME_BETWEEN_READINGS 100   // In milliseconde
-#define MINIMUM_WORKING_RANGE 80 //The sensor needs a minimum of 80 mm to the ground.
+#define TIME_BETWEEN_READINGS 100 // In milliseconde
+#define MINIMUM_WORKING_RANGE 80  //The sensor needs a minimum of 80 mm to the ground.
 
 #define WHEELCHAIR_MOVING_THRESHOLD 0.25f // In meter
 #define WHEELCHAIR_MOVING_TIMEOUT 5000    // In milliseconde
@@ -11,6 +11,11 @@
 
 const char *FAIL_MESSAGE = "FAIL \n";
 const char *SUCCESS_MESSAGE = "SUCCESS \n";
+
+MotionSensor::MotionSensor()
+{
+
+}
 
 void MotionSensor::Initialize()
 {
@@ -63,8 +68,6 @@ std::thread MotionSensor::GetDeltaXYThread()
 
 void MotionSensor::GetDeltaXY()
 {
-
-
     while (1)
     {
         readRangeSensor();
@@ -77,7 +80,7 @@ void MotionSensor::UpdateTravel(int16_t *deltaX, int16_t *deltaY)
 {
     float travelInPixels = sqrtf(float((*deltaX * *deltaX) + (*deltaY * *deltaY)));
     float travelInMillimeter = PixelsToMillimeter(travelInPixels);
-
+    _isMovingTravel += travelInMillimeter;
 #ifdef DEBUG_PRINT
     printf("Delta X %i: \n", *deltaX);
     printf("Delta Y %i: \n", *deltaY);
@@ -95,7 +98,7 @@ void MotionSensor::UpdateTravel(int16_t *deltaX, int16_t *deltaY)
 #endif
 }
 
-void readFlowSensor()
+void MotionSensor::readFlowSensor()
 {
     int16_t deltaX = 0;
     int16_t deltaY = 0;
@@ -104,7 +107,7 @@ void readFlowSensor()
     UpdateTravel(&deltaX, &deltaY);
 }
 
-void readRangeSensor()
+void MotionSensor::readRangeSensor()
 {
     uint16_t range = _rangeSensor.ReadRangeSingleMillimeters();
     updateRangeDeque(range);
@@ -120,12 +123,12 @@ float MotionSensor::GetAverageRange()
     uint16_t rangeDequeSum = 0;
     for (std::deque<uint16_t>::iterator it = _rangeDeque.begin(); it != _rangeDeque.end(); ++it)
     {
-        rangeDequeSum += *it; 
+        rangeDequeSum += *it;
     }
     return float(rangeDequeSum / _rangeDeque.size());
 }
 
-void updateRangeDeque(uint16_t value)
+void MotionSensor::updateRangeDeque(uint16_t value)
 {
     if (_rangeDeque.size() >= MAX_DEQUE_VALUES)
     {
